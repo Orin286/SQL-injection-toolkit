@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}История сканирований{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-history"></i> История сканирований</h5>
+            </div>
+            <div class="card-body">
+                {% if scans %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Цель</th>
+                                    <th>Дата</th>
+                                    <th>Уязвимости</th>
+                                    <th>Длительность</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scan in scans.values() %}
+                                <tr>
+                                    <td>
+                                        <code style="font-size: 12px;">{{ scan.target[:50] }}{% if scan.target|length > 50 %}...{% endif %}</code>
+                                    </td>
+                                    <td>{{ scan.timestamp|timestamp_format }}</td>
+                                    <td>
+                                        {% if scan.vulnerabilities %}
+                                            <span class="badge bg-danger">{{ scan.vulnerabilities|length }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ "%.1f"|format(scan.duration) }}с</td>
+                                    <td>
+                                        {% if scan.vulnerabilities %}
+                                            <span class="badge bg-warning">Уязвим</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Безопасен</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('{{ scan.scan_id }}')">
+                                            <i class="fas fa-eye"></i> Детали
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Пока нет сканирований</h5>
+                        <p class="text-muted">Начните сканирование, чтобы увидеть результаты здесь</p>
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Новое сканирование
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        {% if scans %}
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary">{{ scans|length }}</h3>
+                        <p class="mb-0">Всего сканирований</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-danger">{{ scans.values()|selectattr('vulnerabilities')|list|length }}</h3>
+                        <p class="mb-0">Уязвимых целей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-warning">{{ scans.values()|sum(attribute='vulnerabilities')|length }}</h3>
+                        <p class="mb-0">Всего уязвимостей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-info">{{ "%.1f"|format(scans.values()|sum(attribute='duration') / scans|length) }}с</h3>
+                        <p class="mb-0">Среднее время</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали сканирования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalContent">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewDetails(scanId) {
+    fetch(`/results/${scanId}`)
+    .then(response => response.json())
+    .then(results => {
+        displayModalResults(results);
+        const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+        modal.show();
+    })
+    .catch(error => {
+        console.error('Error loading details:', error);
+    });
+}
+
+function displayModalResults(results) {
+    const content = document.getElementById('modalContent');
+    
+    let html = `
+        <div class="mb-3">
+            <h6>Цель:</h6>
+            <code>${results.target}</code>
+        </div>
+        <div class="mb-3">
+            <h6>Параметры сканирования:</h6>
+            <ul class="list-unstyled">
+                <li><strong>Уровень:</strong> ${results.parameters.level || 1}</li>
+                <li><strong>Риск:</strong> ${results.parameters.risk || 1}</li>
+                <li><strong>Потоки:</strong> ${results.parameters.threads || 10}</li>
+                <li><strong>Мутация:</strong> ${results.parameters.mutate ? 'Да' : 'Нет'}</li>
+            </ul>
+        </div>
+    `;
+    
+    if (results.vulnerabilities && results.vulnerabilities.length > 0) {
+        html += '<h6>Найденные уязвимости:</h6>';
+        results.vulnerabilities.forEach((vuln, index) => {
+            html += `
+                <div class="card vulnerability-card mb-2">
+                    <div class="card-body py-2">
+                        <h6 class="mb-2">Уязвимость #${index + 1}</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small>
+                                    <strong>Параметр:</strong> ${vuln.parameter}<br>
+                                    <strong>Метод:</strong> ${vuln.method}<br>
+                                    <strong>Тип:</strong> ${vuln.type}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small>
+                                    <strong>Payload:</strong><br>
+                                    <code style="font-size: 11px;">${vuln.payload}</code>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        html += '<div class="alert alert-success">Уязвимости не найдены</div>';
+    }
+    
+    content.innerHTML = html;
+}
+</script>
+{% endblock %}

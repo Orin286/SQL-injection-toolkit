@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Помощь и документация{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-question-circle"></i> Помощь и документация</h5>
+            </div>
+            <div class="card-body">
+                <!-- Navigation -->
+                <div class="mb-4">
+                    <nav class="nav nav-pills flex-column flex-sm-row">
+                        <a class="flex-sm-fill text-sm-center nav-link active" href="#overview" data-bs-toggle="pill">Обзор</a>
+                        <a class="flex-sm-fill text-sm-center nav-link" href="#usage" data-bs-toggle="pill">Использование</a>
+                        <a class="flex-sm-fill text-sm-center nav-link" href="#levels" data-bs-toggle="pill">Уровни</a>
+                        <a class="flex-sm-fill text-sm-center nav-link" href="#mutation" data-bs-toggle="pill">Мутация</a>
+                        <a class="flex-sm-fill text-sm-center nav-link" href="#examples" data-bs-toggle="pill">Примеры</a>
+                    </nav>
+                </div>
+
+                <!-- Content -->
+                <div class="tab-content">
+                    <!-- Overview -->
+                    <div class="tab-pane fade show active" id="overview">
+                        <h4><i class="fas fa-info-circle"></i> Обзор</h4>
+                        <p>SQL Injection Toolkit - это продвинутый инструмент для тестирования веб-приложений на уязвимости SQL-инъекций.</p>
+                        
+                        <h5>Основные возможности:</h5>
+                        <ul>
+                            <li>Обнаружение 4 типов SQL-инъекций</li>
+                            <li>Поддержка 5 типов СУБД</li>
+                            <li>Автоматическая эксплуатация уязвимостей</li>
+                            <li>Мутация payload'ов для обхода WAF</li>
+                            <li>Многопоточное сканирование</li>
+                            <li>Веб-интерфейс с визуализацией результатов</li>
+                        </ul>
+                    </div>
+
+                    <!-- Usage -->
+                    <div class="tab-pane fade" id="usage">
+                        <h4><i class="fas fa-play-circle"></i> Использование</h4>
+                        
+                        <h5>Базовое сканирование:</h5>
+                        <ol>
+                            <li>Введите целевой URL в поле "Целевой URL"</li>
+                            <li>Выберите уровень сканирования и риск</li>
+                            <li>Нажмите "Начать сканирование"</li>
+                            <li>Следите за прогрессом в реальном времени</li>
+                            <li>Изучите результаты после завершения</li>
+                        </ol>
+
+                        <h5>Параметры:</h5>
+                        <ul>
+                            <li><strong>Целевой URL:</strong> Адрес страницы для тестирования</li>
+                            <li><strong>POST данные:</strong> Данные для POST запросов (param1=value1&param2=value2)</li>
+                            <li><strong>Cookies:</strong> Cookie строка для аутентификации</li>
+                            <li><strong>Уровень сканирования:</strong> Глубина тестирования (1-5)</li>
+                            <li><strong>Уровень риска:</strong> Опасность payload'ов (1-3)</li>
+                            <li><strong>Потоки:</strong> Количество одновременных запросов</li>
+                            <li><strong>Таймаут:</strong> Время ожидания ответа</li>
+                            <li><strong>Мутация:</strong> Включить обход WAF</li>
+                        </ul>
+                    </div>
+
+                    <!-- Levels -->
+                    <div class="tab-pane fade" id="levels">
+                        <h4><i class="fas fa-layer-group"></i> Уровни сканирования</h4>
+                        
+                        <h5>Уровень 1 - Базовый:</h5>
+                        <p>Тестирование простыми payload'ами (кавычки, слэши)</p>
+                        <ul>
+                            <li>'</li>
+                            <li>"</li>
+                            <li>\</li>
+                            <li>' OR '1'='1</li>
+                        </ul>
+
+                        <h5>Уровень 2 - Union-based:</h5>
+                        <p>Тестирование UNION инъекций</p>
+                        <ul>
+                            <li>' UNION SELECT NULL--</li>
+                            <li>' UNION SELECT 1,2,3--</li>
+                            <li>' UNION SELECT @@version--</li>
+                        </ul>
+
+                        <h5>Уровень 3 - Error-based:</h5>
+                        <p>Вызов SQL ошибок для извлечения данных</p>
+                        <ul>
+                            <li>EXTRACTVALUE()</li>
+                            <li>FLOOR(RAND())</li>
+                            <li>COUNT() GROUP BY</li>
+                        </ul>
+
+                        <h5>Уровень 4 - Boolean-based:</h5>
+                        <p>Логические инъекции с истинными/ложными условиями</p>
+                        <ul>
+                            <li>' AND 1=1--</li>
+                            <li>' AND 1=2--</li>
+                            <li>SUBSTRING() проверки</li>
+                        </ul>
+
+                        <h5>Уровень 5 - Time-based:</h5>
+                        <p>Инъекции с временной задержкой</p>
+                        <ul>
+                            <li>SLEEP()</li>
+                            <li>BENCHMARK()</li>
+                            <li>Heavy JOIN запросы</li>
+                        </ul>
+                    </div>
+
+                    <!-- Mutation -->
+                    <div class="tab-pane fade" id="mutation">
+                        <h4><i class="fas fa-magic"></i> Мутация payload'ов</h4>
+                        <p>Мутация позволяет обходить WAF (Web Application Firewall) защиты.</p>
+
+                        <h5>Техники мутации:</h5>
+                        <ul>
+                            <li><strong>Case Variation:</strong> Случайный регистр символов</li>
+                            <li><strong>Encoding:</strong> URL, HEX, Double URL кодирование</li>
+                            <li><strong>Comments:</strong> Вставка комментариев в SQL</li>
+                            <li><strong>Whitespace:</strong> Изменение пробелов и табов</li>
+                            <li><strong>Concatenation:</strong> Использование CONCAT функций</li>
+                            <li><strong>Character Encoding:</strong> CHAR() функции</li>
+                        </ul>
+
+                        <h5>Пример мутации:</h5>
+                        <div class="terminal">
+                            <div class="terminal-line">Оригинал: ' UNION SELECT @@version--</div>
+                            <div class="terminal-line">Мутация 1: ' UnIoN SeLeCt @@VeRsIoN--</div>
+                            <div class="terminal-line">Мутация 2: '/**/UNION/**/SELECT/**/@@version--</div>
+                            <div class="terminal-line">Мутация 3: ' UNION%20SELECT%20@@version--</div>
+                        </div>
+                    </div>
+
+                    <!-- Examples -->
+                    <div class="tab-pane fade" id="examples">
+                        <h4><i class="fas fa-code"></i> Примеры использования</h4>
+
+                        <h5>Пример 1: Базовое сканирование GET параметра</h5>
+                        <div class="terminal">
+                            <div class="terminal-line">URL: http://example.com/news.php?id=1</div>
+                            <div class="terminal-line">Уровень: 2</div>
+                            <div class="terminal-line">Результат: Найдена Union-based инъекция</div>
+                        </div>
+
+                        <h5>Пример 2: Сканирование POST формы</h5>
+                        <div class="terminal">
+                            <div class="terminal-line">URL: http://example.com/login.php</div>
+                            <div class="terminal-line">POST: username=admin&password=test</div>
+                            <div class="terminal-line">Уровень: 3</div>
+                            <div class="terminal-line">Результат: Найдена Error-based инъекция в username</div>
+                        </div>
+
+                        <h5>Пример 3: Обход WAF</h5>
+                        <div class="terminal">
+                            <div class="terminal-line">URL: http://example.com/search.php</div>
+                            <div class="terminal-line">Мутация: Включена</div>
+                            <div class="terminal-line">Уровень: 5</div>
+                            <div class="terminal-line">Результат: Обойден WAF, найдена Time-based инъекция</div>
+                        </div>
+
+                        <h5>Тестовые URL для практики:</h5>
+                        <ul>
+                            <li><code>http://localhost:8080/test?id=1</code> - Тестовый сервер</li>
+                            <li><code>http://testphp.vulnweb.com/artists.php?artist=1</code> - Acunetix тест</li>
+                            <li><code>http://testfire.net/bank/login.aspx</code> - IBM тест</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Tips -->
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Быстрые советы</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>✅ Рекомендуется:</h6>
+                        <ul>
+                            <li>Начинайте с низких уровней сканирования</li>
+                            <li>Используйте мутацию при обнаружении WAF</li>
+                            <li>Проверяйте результаты вручную</li>
+                            <li>Сохраняйте историю сканирований</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>⚠️ Осторожно:</h6>
+                        <ul>
+                            <li>Не используйте на продакшн сайтах без разрешения</li>
+                            <li>Высокие уровни риска могут вызвать DoS</li>
+                            <li>Time-based атаки медленные</li>
+                            <li>Соблюдайте законодательство</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

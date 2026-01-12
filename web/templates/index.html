@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Injection Toolkit - Главная{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Scan Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-search"></i> Настройки сканирования</h5>
+            </div>
+            <div class="card-body">
+                <form id="scanForm">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="url" class="form-label">Целевой URL *</label>
+                            <input type="url" class="form-control" id="url" name="url" 
+                                   placeholder="http://example.com/page.php?id=1" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="level" class="form-label">Уровень сканирования</label>
+                            <select class="form-select" id="level" name="level">
+                                <option value="1">1 - Базовый</option>
+                                <option value="2">2 - Union</option>
+                                <option value="3">3 - Error</option>
+                                <option value="4">4 - Boolean</option>
+                                <option value="5">5 - Time-based</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="mutate" name="mutate">
+                                <label class="form-check-label" for="mutate">
+                                    <i class="fas fa-magic"></i> Включить мутацию payload'ов (обход WAF)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg" id="scanBtn">
+                            <i class="fas fa-play"></i> Начать сканирование
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="card d-none" id="progressCard">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-spinner fa-spin"></i> Выполняется сканирование...
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="terminal" id="terminalOutput"></div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="card d-none" id="resultsCard">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Результаты сканирования</h5>
+            </div>
+            <div class="card-body">
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentScanId = null;
+let statusInterval = null;
+
+document.getElementById('scanForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    startScan();
+});
+
+function startScan() {
+    const formData = new FormData(document.getElementById('scanForm'));
+    const data = Object.fromEntries(formData);
+    
+    // Set default values for missing fields
+    if (!data.risk) data.risk = '2';
+    if (!data.threads) data.threads = '10';
+    if (!data.timeout) data.timeout = '10';
+    
+    // Generate scan ID
+    const scanId = 'scan_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // Show progress card
+    document.getElementById('progressCard').classList.remove('d-none');
+    document.getElementById('resultsCard').classList.add('d-none');
+    document.getElementById('scanBtn').disabled = true;
+    document.getElementById('scanBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сканирование...';
+    
+    // Clear terminal
+    document.getElementById('terminalOutput').innerHTML = '';
+    
+    // Start scan
+    fetch('/scan', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.error) {
+            showError(result.error);
+            return;
+        }
+        currentScanId = result.scan_id;
+        // Start polling for status
+        statusInterval = setInterval(checkStatus, 1000);
+    })
+    .catch(error => {
+        showError('Ошибка запуска сканирования: ' + error.message);
+        resetForm();
+    });
+}
+
+function checkStatus() {
+    if (!currentScanId) return;
+    
+    fetch(`/status/${currentScanId}`)
+    .then(response => response.json())
+    .then(status => {
+        updateProgress(status);
+        
+        if (status.status === 'completed') {
+            clearInterval(statusInterval);
+            showResults(currentScanId);
+            resetForm();
+        } else if (status.status === 'error') {
+            clearInterval(statusInterval);
+            showError(status.error || 'Ошибка сканирования');
+            resetForm();
+        }
+    })
+    .catch(error => {
+        console.error('Error checking status:', error);
+    });
+}
+
+function updateProgress(status) {
+    const terminal = document.getElementById('terminalOutput');
+    
+    // Add terminal output
+    if (status.vulnerabilities && status.vulnerabilities.length > 0) {
+        status.vulnerabilities.forEach(vuln => {
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.innerHTML = `<span style="color: #27ae60;">[+] Найдена уязвимость: ${vuln.parameter} (${vuln.type})</span>`;
+            terminal.appendChild(line);
+        });
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+}
+
+function showResults(scanId) {
+    fetch(`/results/${scanId}`)
+    .then(response => response.json())
+    .then(results => {
+        displayResults(results);
+        document.getElementById('progressCard').classList.add('d-none');
+        document.getElementById('resultsCard').classList.remove('d-none');
+    })
+    .catch(error => {
+        showError('Ошибка загрузки результатов: ' + error.message);
+    });
+}
+
+function displayResults(results) {
+    const content = document.getElementById('resultsContent');
+    
+    let html = `
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6><i class="fas fa-target"></i> Цель:</h6>
+                <p><code>${results.target}</code></p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-clock"></i> Длительность:</h6>
+                <p>${Math.round(results.duration)} секунд</p>
+            </div>
+        </div>
+    `;
+    
+    if (results.vulnerabilities && results.vulnerabilities.length > 0) {
+        html += '<h6><i class="fas fa-exclamation-triangle text-danger"></i> Найденные уязвимости:</h6>';
+        results.vulnerabilities.forEach((vuln, index) => {
+            html += `
+                <div class="card vulnerability-card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-bug"></i> Уязвимость #${index + 1}
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Параметр:</strong> ${vuln.parameter}<br>
+                                <strong>Метод:</strong> ${vuln.method}<br>
+                                <strong>Тип:</strong> ${vuln.type}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Payload:</strong><br>
+                                <code style="font-size: 12px;">${vuln.payload}</code>
+                            </div>
+                        </div>
+                        ${vuln.exploitation ? displayExploitation(vuln.exploitation) : ''}
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        html += '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Уязвимости не найдены</div>';
+    }
+    
+    content.innerHTML = html;
+}
+
+function displayExploitation(exploitation) {
+    let html = '<div class="mt-3"><h6><i class="fas fa-key"></i> Результаты эксплуатации:</h6>';
+    
+    if (exploitation.db_type) {
+        html += `<p><strong>Тип БД:</strong> ${exploitation.db_type}</p>`;
+    }
+    
+    if (exploitation.db_info) {
+        html += '<p><strong>Информация о БД:</strong><ul>';
+        Object.entries(exploitation.db_info).forEach(([key, value]) => {
+            html += `<li>${key}: ${value}</li>`;
+        });
+        html += '</ul></p>';
+    }
+    
+    if (exploitation.tables && exploitation.tables.length > 0) {
+        html += `<p><strong>Таблицы (${exploitation.tables.length}):</strong><br>`;
+        html += exploitation.tables.slice(0, 10).join(', ');
+        if (exploitation.tables.length > 10) {
+            html += ` ... и еще ${exploitation.tables.length - 10}`;
+        }
+        html += '</p>';
+    }
+    
+    // Display ready-to-use payloads
+    if (exploitation.injection_payloads && exploitation.injection_payloads.length > 0) {
+        html += `
+            <div class="mt-3">
+                <h6><i class="fas fa-code"></i> Готовые SQL инъекции (${exploitation.injection_payloads.length}):</h6>
+                <div class="accordion" id="payloadsAccordion">
+        `;
+        
+        exploitation.injection_payloads.forEach((payload, index) => {
+            const payloadId = `payload_${index}`;
+            html += `
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading_${payloadId}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${payloadId}">
+                            <i class="fas fa-terminal me-2"></i> ${payload.type}
+                        </button>
+                    </h2>
+                    <div id="collapse_${payloadId}" class="accordion-collapse collapse" data-bs-parent="#payloadsAccordion">
+                        <div class="accordion-body">
+                            <p><strong>Описание:</strong> ${payload.description}</p>
+                            <p><strong>Payload:</strong></p>
+                            <div class="terminal mb-2">
+                                <code>${payload.payload}</code>
+                            </div>
+                            <p><strong>Полный URL:</strong></p>
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" value="${payload.url}" readonly>
+                                <button class="btn btn-outline-primary" onclick="copyToClipboard('${payload.url}')">
+                                    <i class="fas fa-copy"></i> Копировать
+                                </button>
+                            </div>
+                            ${payload.columns ? `<p><strong>Колонки:</strong> ${payload.columns.join(', ')}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+function showError(message) {
+    const content = document.getElementById('resultsContent');
+    content.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> ${message}</div>`;
+    document.getElementById('progressCard').classList.add('d-none');
+    document.getElementById('resultsCard').classList.remove('d-none');
+}
+
+function resetForm() {
+    document.getElementById('scanBtn').disabled = false;
+    document.getElementById('scanBtn').innerHTML = '<i class="fas fa-play"></i> Начать сканирование';
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success message
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed bottom-0 end-0 p-3';
+        toast.style.zIndex = '1050';
+        toast.innerHTML = `
+            <div class="toast show" role="alert">
+                <div class="toast-body">
+                    <i class="fas fa-check text-success me-2"></i>
+                    URL скопирован в буфер обмена!
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+</script>
+{% endblock %}

